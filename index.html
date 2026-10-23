@@ -316,6 +316,18 @@ mark{background:#FFF3C4;color:inherit;padding:0 3px;border-radius:4px;text-decor
 .pad canvas:not(.gridcv){position:relative;z-index:1}
 .pad .ghost{z-index:2}
 .pad.erasing{cursor:cell;border-color:var(--pink)}
+/* ---- 10/23 獎勵箱 ---- */
+.hist .badge{display:inline-block;background:var(--pink);color:#fff;border-radius:999px;padding:2px 9px;font-size:12px;margin-left:6px;font-weight:900}
+.hist .badge:empty{display:none}
+.hist li .nm{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hist li .dn{font-size:11px;color:var(--green);font-weight:900}
+.hist li.done{opacity:.7}
+.hist li .n.st{background:#FFF3C4;color:#8A6414}
+.hist .tabs{margin-bottom:4px}
+.hist .tab{padding:8px}
+.rsum{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.li .rd-ok{border-radius:999px;padding:6px 12px;font-size:12px;font-weight:900;background:var(--green);color:#fff;white-space:nowrap}
+.li .rd-undo{border-radius:999px;padding:5px 10px;font-size:12px;font-weight:900;background:var(--paper-2);color:var(--ink-2);border:2px solid var(--line);white-space:nowrap}
 </style>
 </head>
 <body>
@@ -403,9 +415,13 @@ mark{background:#FFF3C4;color:inherit;padding:0 3px;border-radius:4px;text-decor
 
     <!-- ===== history ===== -->
     <section class="card hist" id="histCard">
-      <button class="h" id="histToggle"><span>已獲得的獎勵 <span id="histCount">0</span></span><span id="histArrow">▼</span></button>
-      <ul id="histList" class="hidden"></ul>
-      <div class="small hidden" id="histEmpty">還沒有獎勵，努力答題轉輪盤吧！</div>
+      <button class="h" id="histToggle"><span>🎁 我的獎勵箱 <span id="histCount" class="badge"></span></span><span id="histArrow">▼</span></button>
+      <div id="histBody" class="hidden">
+        <div class="tabs" id="histTabs" style="margin-top:8px"><button class="tab on" data-t="todo" id="histTabTodo">待兌換</button><button class="tab" data-t="done" id="histTabDone">已兌換</button></div>
+        <ul id="histList"></ul>
+        <div class="small hidden" id="histEmpty"></div>
+        <div class="small hidden" id="histHint">想領獎的時候跟爸媽說，爸媽到「設定 → 獎勵核銷」按「已發放」，獎品就會移到「已兌換」。</div>
+      </div>
     </section>
   </div>
 </div>
@@ -498,6 +514,8 @@ mark{background:#FFF3C4;color:inherit;padding:0 3px;border-radius:4px;text-decor
     <div id="prizeEditor"></div>
     <div class="small" id="evBox" style="font-weight:900;color:var(--blue-d)"></div>
     <div class="two" style="margin-top:8px"><button class="sbtn soft" id="prizeReset">恢復預設獎勵</button></div>
+    <h3>獎勵核銷</h3>
+    <div id="redeemAdmin"></div>
     <h3>玩家管理</h3>
     <div class="small">要給別的小朋友玩，先在首頁「👧」切換或新增玩家，紀錄就不會混在一起。這裡可以刪除不再用的玩家（紀錄會一起刪掉）。</div>
     <div id="playerAdmin"></div>
@@ -938,7 +956,7 @@ function rightLine(t){
 /* ======================= 狀態 ======================= */
 const KEY="ear-dog-v2"; // 舊版單一玩家存檔（第一次開啟會搬到 V3）
 const KEY3="ear-dog-v3"; // 新版：共用設定 + 多玩家進度
-const CFG_KEYS=["limit","custom","disabled","removed","wait","penalty","prizes","spinCost","masterNeed","v3","v4","v5","starReward","disabledQ"];
+const CFG_KEYS=["limit","custom","disabled","removed","wait","penalty","prizes","spinCost","masterNeed","v3","v4","v5","starReward","disabledQ","redeemPin"];
 const PROG_KEYS=["score","history","dayKey","dayCount","mode","grp","qNo","mastery","mastered","wordState","stars","starDay","daily","speak","speakLog","qHist","starRedeem","charProg","charSess","wHist"];
 let DB=null; // {cfg:{}, players:{name:{...}}, current:name}
 const OLD_KEYS={main:"ear-dog-word-game-v1",words:"ear-dog-words-v1",disabled:"ear-dog-disabled-v1"};
@@ -992,7 +1010,11 @@ function load(){
   if(!s.v4){s.v4=1;s.penalty=PENALTY_DEF;s.spinCost=SPIN_COST_DEF;s.limit=LIMIT_DEF} // 2026/9/29：10 分轉一次
   // 2026/9/30 改版：答錯不扣分、預設全部、學習星星、複習排程、每日題組
   s.charProg=s.charProg||{};
-  s.wordState=s.wordState||{};Object.keys(s.wordState).forEach(k=>{if(!s.wordState[k]||typeof s.wordState[k]!=="object")delete s.wordState[k]});s.wHist=s.wHist||{};s.qHist=s.qHist||{};Object.keys(s.qHist).forEach(k=>{if(typeof s.qHist[k]==="string")s.qHist[k]={d:s.qHist[k],ok:0,bad:0}});s.disabledQ=s.disabledQ||[];s.speakLog=s.speakLog||[];s.starRedeem=s.starRedeem||[];
+  s.wordState=s.wordState||{};Object.keys(s.wordState).forEach(k=>{if(!s.wordState[k]||typeof s.wordState[k]!=="object")delete s.wordState[k]});s.wHist=s.wHist||{};
+  if(s.redeemPin==null)s.redeemPin="";
+  (s.history||[]).forEach((h,i)=>{if(h.id==null)h.id="w"+i+"-"+(h.time||"").replace(/\D/g,"");if(h.done==null)h.done=false});
+  (s.starRedeem||[]).forEach((h,i)=>{if(h.id==null)h.id="s"+i+"-"+(h.d||"").replace(/\D/g,"");if(h.done==null)h.done=false});
+  s.qHist=s.qHist||{};Object.keys(s.qHist).forEach(k=>{if(typeof s.qHist[k]==="string")s.qHist[k]={d:s.qHist[k],ok:0,bad:0}});s.disabledQ=s.disabledQ||[];s.speakLog=s.speakLog||[];s.starRedeem=s.starRedeem||[];
   if(!s.stars)s.stars={n:0,used:0,log:[]};
   if(!s.starReward||!Array.isArray(s.starReward.tiers)){const on=s.starReward?s.starReward.on!==false:true;s.starReward=JSON.parse(JSON.stringify(STAR_REWARD_DEF));s.starReward.on=on} // 2026/9/30：改成階梯式文具獎勵
   s.starReward.tiers.forEach(t=>{t.n=Math.max(1,parseInt(t.n,10)||1);t.text=String(t.text||"").trim()});
@@ -1625,7 +1647,7 @@ function spin(){
     const d=new Date();
     const time=`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
     const free=p.name.indexOf("再轉")>=0;
-    if(free){S.score+=S.spinCost}else{S.history.push({name:`${CHARS[p.c].name}：${p.name}`,time})}
+    if(free){S.score+=S.spinCost}else{S.history.push({id:"w"+Date.now(),name:`${CHARS[p.c].name}：${p.name}`,time,c:p.c,done:false})}
     spinning=false;
     $("prizeImg").src=cimg(p.c);$("prizeWho").textContent=free?`${CHARS[p.c].name}送你再轉一次，${S.spinCost} 分退還！`:`${CHARS[p.c].name}送你`;
     $("prizeName").textContent=p.name;$("prizeBox").classList.remove("hidden");
@@ -1633,12 +1655,56 @@ function spin(){
   },4700);
 }
 let histOpen=false;
+/* 獎勵箱：輪盤獎品 + 星星獎品，分「待兌換」「已兌換」 */
+let histTab="todo";
+function rewardItems(){
+  const a=S.history.map((h,i)=>({kind:"wheel",src:"w",idx:i,id:h.id,name:h.name,when:h.time||"",c:h.c,done:!!h.done,doneAt:h.doneAt||"",sort:i}));
+  const b=S.starRedeem.map((h,i)=>({kind:"star",src:"s",idx:i,id:h.id,name:h.text,when:h.d||"",done:!!h.done,doneAt:h.doneAt||"",sort:1e6+i}));
+  return a.concat(b);
+}
+function pendingRewards(){return rewardItems().filter(x=>!x.done)}
 function renderHistory(){
-  $("histCount").textContent=S.history.length;
+  const items=rewardItems(),todo=items.filter(x=>!x.done),done=items.filter(x=>x.done);
+  $("histCount").textContent=todo.length?`待兌換 ${todo.length}`:"";
   $("histArrow").textContent=histOpen?"▲":"▼";
-  $("histList").classList.toggle("hidden",!histOpen||!S.history.length);
-  $("histEmpty").classList.toggle("hidden",!histOpen||!!S.history.length);
-  $("histList").innerHTML=S.history.map((h,i)=>({n:i+1,...h})).reverse().map(h=>`<li><span class="n">${h.n}</span><span>${esc(h.name)}</span><span class="t">${esc(h.time||"")}</span></li>`).join("");
+  $("histBody").classList.toggle("hidden",!histOpen);
+  document.querySelectorAll("#histTabs .tab").forEach(b=>b.classList.toggle("on",b.dataset.t===histTab));
+  $("histTabTodo").textContent=`待兌換 ${todo.length}`;$("histTabDone").textContent=`已兌換 ${done.length}`;
+  const list=(histTab==="todo"?todo:done).slice().sort((x,y)=>y.sort-x.sort);
+  $("histList").innerHTML=list.map(h=>`<li class="${h.done?"done":""}"><span class="n ${h.kind==="star"?"st":""}">${h.kind==="star"?"⭐":"🎡"}</span><span class="nm">${esc(h.name)}${h.done?`<span class="dn">✓ ${esc(h.doneAt)} 已領</span>`:""}</span><span class="t">${esc(h.when)}</span></li>`).join("");
+  $("histEmpty").classList.toggle("hidden",!!list.length);
+  $("histEmpty").textContent=histTab==="todo"?(done.length?"全部都領到了！繼續努力答題吧。":"還沒有獎勵，努力答題轉輪盤吧！"):"還沒有兌換過的獎勵。";
+  $("histHint").classList.toggle("hidden",histTab!=="todo"||!todo.length);
+}
+/* 家長核銷 */
+function markRedeemed(item,done){
+  const arr=item.src==="w"?S.history:S.starRedeem;const h=arr[item.idx];if(!h)return;
+  h.done=done;h.doneAt=done?twToday().slice(5).replace("-","/"):"";
+  save();renderHistory();renderRedeemAdmin();
+}
+function askPin(){
+  const pin=S.redeemPin||"";if(!pin)return true;
+  const v=prompt("請輸入家長密碼");return v!==null&&v.trim()===pin;
+}
+function renderRedeemAdmin(){
+  const box=$("redeemAdmin");if(!box)return;
+  const items=rewardItems(),todo=items.filter(x=>!x.done).sort((x,y)=>y.sort-x.sort),done=items.filter(x=>x.done).sort((x,y)=>y.sort-x.sort);
+  const sum={};todo.forEach(x=>{const k=x.name.replace(/（\d+ 顆）$/,"");sum[k]=(sum[k]||0)+1});
+  const sumHtml=Object.keys(sum).length?`<div class="rsum">${Object.entries(sum).map(([k,v])=>`<span class="chip on">${esc(k)} × ${v}</span>`).join("")}</div>`:"";
+  box.innerHTML=`<div class="small">孩子的獎勵會先放在「待兌換」。實際把獎品給她之後，在這裡按「已發放」核銷；核銷後移到「已兌換」，不會再出現在待兌換清單。</div>
+  ${sumHtml}
+  <div class="small" style="font-weight:900;color:var(--blue-d);margin-top:8px">待兌換（${todo.length}）</div>
+  ${todo.length?todo.map(x=>`<div class="li"><span class="w" style="font-size:14px;min-width:0">${x.kind==="star"?"⭐":"🎡"} ${esc(x.name)}</span><span class="d">${esc(x.when)}</span><button class="rd-ok" data-id="${esc(x.id)}">已發放</button></div>`).join(""):`<div class="small">目前沒有待兌換的獎勵。</div>`}
+  ${todo.length>1?`<div class="two" style="margin-top:8px"><button class="sbtn pink" id="redeemAll">全部標記已發放（${todo.length}）</button></div>`:""}
+  <div class="small" style="font-weight:900;color:var(--blue-d);margin-top:12px">已兌換（${done.length}）</div>
+  ${done.length?`<div class="hidden" id="doneList">`+done.map(x=>`<div class="li"><span class="w" style="font-size:14px;min-width:0;color:var(--ink-2)">${x.kind==="star"?"⭐":"🎡"} ${esc(x.name)}</span><span class="d">${esc(x.when)} → ${esc(x.doneAt)} 已領</span><button class="rd-undo" data-id="${esc(x.id)}">復原</button></div>`).join("")+`</div><button class="sbtn soft" id="doneTg" style="margin-top:6px">顯示已兌換紀錄</button>`:`<div class="small">還沒有核銷過的獎勵。</div>`}
+  <div class="set" style="margin-top:12px"><span>家長密碼<div class="small">設定後，核銷和兌換星星都要輸入；留白＝不用密碼</div></span><input type="password" id="pinInput" value="${esc(S.redeemPin||"")}" placeholder="4 位數字" style="width:90px;border:2px solid var(--line);border-radius:10px;padding:6px 8px;text-align:center"></div>`;
+  const find=id=>items.find(x=>x.id===id);
+  box.querySelectorAll(".rd-ok").forEach(b=>b.onclick=()=>{const it=find(b.dataset.id);if(!it)return;if(!askPin())return;if(!confirm(`確認已經把「${it.name}」給孩子了？`))return;markRedeemed(it,true)});
+  box.querySelectorAll(".rd-undo").forEach(b=>b.onclick=()=>{const it=find(b.dataset.id);if(!it)return;if(!askPin())return;markRedeemed(it,false)});
+  const ra=$("redeemAll");if(ra)ra.onclick=()=>{if(!askPin())return;if(!confirm(`確認這 ${todo.length} 項獎勵都已經發放了？`))return;todo.forEach(it=>{const arr=it.src==="w"?S.history:S.starRedeem;const h=arr[it.idx];if(h){h.done=true;h.doneAt=twToday().slice(5).replace("-","/")}});save();renderHistory();renderRedeemAdmin()};
+  const dt=$("doneTg");if(dt)dt.onclick=()=>{const l=$("doneList");l.classList.toggle("hidden");dt.textContent=l.classList.contains("hidden")?"顯示已兌換紀錄":"隱藏已兌換紀錄"};
+  $("pinInput").onchange=e=>{const v=e.target.value.trim();if(v&&!/^\d{4,6}$/.test(v)){alert("密碼請用 4～6 位數字");e.target.value=S.redeemPin||"";return}S.redeemPin=v;save()};
 }
 
 /* ======================= 後台 ======================= */
@@ -1648,7 +1714,7 @@ function renderAdmin(){
   $("customEmpty").classList.toggle("hidden",!!S.custom.length);
   $("customList").querySelectorAll(".rm").forEach(b=>b.onclick=()=>{S.custom.splice(parseInt(b.dataset.i,10),1);save();renderAdmin();renderStart()});
   $("limitInput").value=S.limit;$("waitInput").value=S.wait;$("adminDay").textContent=dailyDoneCount();
-  renderPlanStats();renderStarAdmin();renderQBank();
+  renderPlanStats();renderStarAdmin();renderQBank();renderRedeemAdmin();
   const cs=charSummary();const weakList=CHARBANK.filter(([c])=>{const st=S.charProg[c];return st&&st.bad>=st.ok&&(st.ok||st.bad)}).map(([c])=>c);
   $("charAdmin").innerHTML=`<div class="small">生字表 ${cs.all} 個字（康軒一二年級＋三年級一～六課），已練過 ${cs.done} 個。需要再練（${weakList.length}）：${weakList.map(esc).join("、")||"—"}</div>`;
   const db=loadDB();
@@ -1707,6 +1773,7 @@ $("resetBtn").onclick=()=>{if(!confirm("要重新安排今天的題組嗎？今�
 $("spinBanner").onclick=openWheel;$("doneWheel").onclick=openWheel;
 $("wheelClose").onclick=closeWheel;$("spinBtn").onclick=spin;$("wheelCap").onclick=spin;
 $("histToggle").onclick=()=>{histOpen=!histOpen;renderHistory()};
+document.querySelectorAll("#histTabs .tab").forEach(b=>b.onclick=()=>{histTab=b.dataset.t;renderHistory()});
 function openAdminTab(t){$("adminDrawer").classList.remove("hidden");$("tabWords").classList.toggle("hidden",t!=="words");$("tabSettings").classList.toggle("hidden",t!=="settings");document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.t===t));$("adminTitle").textContent=t==="words"?"詞語庫":"設定";renderAdmin();$("adminDrawer").querySelector(".panel").scrollTop=0}
 $("openAdmin").onclick=()=>openAdminTab("words");$("openSettings").onclick=()=>openAdminTab("settings");
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>openAdminTab(b.dataset.t));
@@ -1760,8 +1827,8 @@ function renderStarAdmin(){
   $("tierEditor").innerHTML=r.tiers.map((t,i)=>`<div class="tier-row"><input type="number" class="tn" data-i="${i}" min="1" max="999" value="${t.n}"><span>顆 →</span><input class="tt" data-i="${i}" value="${esc(t.text)}" placeholder="獎品（留白＝不用這一級）"><button class="sbtn ${r.on&&t.text&&av>=t.n?"pink":"soft"} rd" data-i="${i}" ${r.on&&t.text&&av>=t.n?"":"disabled"}>兌換</button></div>`).join("");
   $("tierEditor").querySelectorAll(".tn").forEach(inp=>inp.onchange=()=>{const v=parseInt(inp.value,10);r.tiers[+inp.dataset.i].n=isNaN(v)?1:Math.max(1,Math.min(999,v));save();renderStarAdmin();renderStart()});
   $("tierEditor").querySelectorAll(".tt").forEach(inp=>inp.onchange=()=>{r.tiers[+inp.dataset.i].text=inp.value.trim();save();renderStarAdmin();renderStart()});
-  $("tierEditor").querySelectorAll(".rd").forEach(b=>b.onclick=()=>{const t=r.tiers[+b.dataset.i];if(!r.on||!t.text||starsAvail()<t.n)return;if(!confirm(`要用 ${t.n} 顆星星換「${t.text}」嗎？`))return;S.stars.used+=t.n;S.starRedeem.push({d:twToday(),text:`${t.text}（${t.n} 顆）`});save();renderStarAdmin();renderStart()});
-  $("starLog").innerHTML=S.starRedeem.length?`<div class="small">兌換紀錄：</div>`+S.starRedeem.slice().reverse().map(x=>`<div class="li"><span class="w" style="font-size:14px">${esc(x.text)}</span><span class="d">${esc(x.d)}</span></div>`).join(""):`<div class="small">還沒有兌換紀錄。</div>`;
+  $("tierEditor").querySelectorAll(".rd").forEach(b=>b.onclick=()=>{const t=r.tiers[+b.dataset.i];if(!r.on||!t.text||starsAvail()<t.n)return;if(!askPin())return;if(!confirm(`要用 ${t.n} 顆星星換「${t.text}」嗎？換完會放進「待兌換」，實際給孩子後再核銷。`))return;S.stars.used+=t.n;S.starRedeem.push({id:"s"+Date.now(),d:twToday(),text:`${t.text}（${t.n} 顆）`,done:false});save();renderStarAdmin();renderStart();refreshTop()});
+  $("starLog").innerHTML=S.starRedeem.length?`<div class="small">星星兌換紀錄（核銷請到下方「獎勵核銷」）：</div>`+S.starRedeem.slice().reverse().map(x=>`<div class="li"><span class="w" style="font-size:14px">${esc(x.text)}</span><span class="d">${esc(x.d)}${x.done?"・已發放 "+esc(x.doneAt||""):"・待兌換"}</span></div>`).join(""):`<div class="small">還沒有兌換紀錄。</div>`;
   const sl=S.speakLog.slice(-7).reverse();
   $("speakHist").innerHTML=sl.length?sl.map(x=>`<div class="li"><span class="w" style="font-size:14px">${esc(x.w)}</span><span class="d">${esc(x.d)}・${x.status==="confirmed"?"家長已確認（能使用）":x.status==="practiced"?"已練習":"跳過"}</span></div>`).join(""):`<div class="small">還沒有口說紀錄。</div>`;
 }
