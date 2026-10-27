@@ -333,6 +333,11 @@ mark{background:#FFF3C4;color:inherit;padding:0 3px;border-radius:4px;text-decor
 .hist li .rd-ok,.hist li .rd-undo{margin-left:auto;flex-shrink:0}
 .hist li.all{border-top:none;padding-top:4px}
 .hist li.all .sbtn{width:100%}
+
+.pad.two{width:100%;max-width:520px;height:auto;aspect-ratio:2/1}
+.pad.two .ghost{font-size:150px}
+.pad.two .ghost span{flex:1;text-align:center}
+.chw .zslot+.zslot{margin-left:8px}
 </style>
 </head>
 <body>
@@ -1204,8 +1209,8 @@ function renderStart(){
   const rb=$("rebuildBtn");if(rb)rb.onclick=()=>{rebuildRemaining();renderStart();refreshTop()};
   renderStarCard();
   const sm=charSummary(),rng=charRange();
-  $("charInfo").innerHTML=`三上一～六課 ${sm.g3} 個字，已練過 ${sm.g3done} 個${sm.g3weak?`，有 ${sm.g3weak} 個需要再練`:""}；一二年級 ${sm.all-sm.g3} 個字當複習${sm.words?`；累計造詞 ${sm.words} 個`:""}。每個字先寫出來，再用它造一個新的語詞（可以用以前學過的字來組，像「應該」「通透」「溫習」）；每 5 個字寫對又造詞成功，換 1 顆學習星星。
-  <div class="chips" style="margin-top:6px">${[["mix3","三上為主（7＋3）"],["only3","只練三上"],["all","一～三年級平均"]].map(([k,t])=>`<button class="chip ${rng===k?"on":""}" data-cr="${k}">${t}</button>`).join("")}</div>`;
+  $("charInfo").innerHTML=`三上一～六課 ${sm.g3} 個字，已練過 ${sm.g3done} 個${sm.g3weak?`，有 ${sm.g3weak} 個需要再練`:""}；一二年級 ${sm.all-sm.g3} 個字當複習${sm.words?`；累計造詞 ${sm.words} 個`:""}。每次 10 題、順序打亂：一部分是「寫語詞」（三上的字＋學過的字組成的詞，像應該、通透、溫習，兩個字都要寫），其他是單字；每題寫完再用這個字造一個新的詞。每 5 題寫對又造詞成功，換 1 顆學習星星。
+  <div class="chips" style="margin-top:6px">${[["mix3","三上為主（4 詞＋3 字＋3 複習）"],["only3","只練三上（5 詞＋5 字）"],["all","一～三年級平均"]].map(([k,t])=>`<button class="chip ${rng===k?"on":""}" data-cr="${k}">${t}</button>`).join("")}</div>`;
   $("charInfo").querySelectorAll("[data-cr]").forEach(b=>b.onclick=()=>{S.charRange=b.dataset.cr;save();renderStart()});
   // 題目快不夠時提前提醒（少於一天題數 + 5）
   const need=S.limit+5;
@@ -1526,10 +1531,13 @@ function renderSpeak(){
    每個字兩步：1) 看注音和語詞，把字寫出來 → 自己比對；2) 再用這個字造一個不一樣的語詞（家長或自己看過才算） */
 const CHAR_G3={1:"字舟灑載航忌妒失讓",2:"窗戶名板答案專穫賽已傘似追喊歪霧晃亂",3:"由暴迷岸撞扶店闆機料實繞留觀獅",4:"擺露懷準射刺痛使毒欺負感遇危葵丑觸",5:"球練習努總段利壓秒整該必通場導貴絲綁鬆翩",6:"非關澡怕奮應平毛肚蓋柔揉副膠喵茸黏"};
 const CHAR_LESSON={};Object.entries(CHAR_G3).forEach(([n,cs])=>[...cs].forEach(c=>CHAR_LESSON[c]=+n));
-const CHAR_WORDS={"字": ["生字", "名字", "寫字", "文字"], "舟": ["小舟", "輕舟", "龍舟"], "灑": ["灑水", "灑落", "灑下"], "載": ["記載", "載運", "滿載", "載客"], "航": ["航行", "航空", "航海", "航線"], "忌": ["忌妒", "顧忌", "禁忌"], "妒": ["妒忌", "嫉妒"], "失": ["失去", "消失", "失望", "迷失"], "讓": ["讓開", "讓座", "讓步", "禮讓"], "窗": ["窗戶", "窗外", "窗簾", "開窗"], "戶": ["窗戶", "住戶", "戶外", "門戶"], "名": ["名字", "有名", "名片", "第一名"], "板": ["黑板", "木板", "地板", "滑板"], "答": ["回答", "答案", "答應", "問答"], "案": ["答案", "圖案", "方案", "案件"], "專": ["專心", "專家", "專門", "專注"], "穫": ["收穫"], "賽": ["比賽", "賽跑", "球賽", "決賽"], "已": ["已經"], "傘": ["雨傘", "陽傘", "打傘", "傘下"], "似": ["相似", "好似", "似乎", "類似"], "追": ["追趕", "追上", "追問", "追求"], "喊": ["大喊", "喊叫", "呼喊", "喊話"], "歪": ["歪歪的", "歪頭", "東倒西歪", "歪斜"], "霧": ["起霧", "大霧", "霧氣", "濃霧"], "晃": ["搖晃", "晃動", "晃來晃去"], "亂": ["慌亂", "混亂", "搗亂", "亂七八糟"], "由": ["自由", "由於", "理由", "經由"], "暴": ["暴風雨", "暴雨", "風暴", "暴躁"], "迷": ["迷路", "迷人", "著迷", "迷宮"], "岸": ["河岸", "海岸", "上岸", "岸邊"], "撞": ["撞到", "撞車", "撞見", "碰撞"], "扶": ["扶著", "扶手", "扶持", "攙扶"], "店": ["書店", "飯店", "商店", "店員"], "闆": ["老闆", "老闆娘"], "機": ["飛機", "機會", "手機", "機器"], "料": ["料理", "材料", "飲料", "資料"], "實": ["實在", "果實", "老實", "誠實"], "繞": ["繞路", "圍繞", "繞過", "繞圈"], "留": ["留下", "停留", "保留", "留言"], "觀": ["參觀", "觀看", "觀察", "觀眾"], "獅": ["獅子", "舞獅", "母獅"], "擺": ["擺放", "擺動", "搖擺", "擺設"], "露": ["露水", "露出", "露珠", "露營"], "懷": ["懷念", "懷抱", "懷疑", "胸懷"], "準": ["準時", "準備", "標準", "準確"], "射": ["發射", "照射", "射箭", "射擊"], "刺": ["刺刺", "刺痛", "魚刺", "刺激"], "痛": ["好痛", "痛苦", "頭痛", "疼痛"], "使": ["使用", "天使", "使者", "即使"], "毒": ["有毒", "病毒", "中毒", "毒蛇"], "欺": ["欺負", "欺騙", "欺善怕惡"], "負": ["欺負", "負責", "勝負", "負擔"], "感": ["感謝", "感動", "感冒", "感覺"], "遇": ["遇到", "相遇", "遇見", "遭遇"], "危": ["危險", "危機", "危急"], "葵": ["向日葵", "葵花"], "丑": ["小丑", "丑角"], "觸": ["接觸", "觸摸", "觸角", "觸碰"], "球": ["打球", "球場", "籃球", "地球"], "練": ["練習", "教練", "練字", "訓練"], "習": ["練習", "學習", "溫習", "習慣", "複習"], "努": ["努力"], "總": ["總是", "總共", "總算", "總統"], "段": ["一段", "段落", "手段", "階段"], "利": ["利用", "順利", "便利", "鋒利"], "壓": ["壓力", "壓住", "壓扁", "氣壓"], "秒": ["秒針", "幾秒", "分秒", "秒鐘"], "整": ["整理", "完整", "整天", "整齊"], "該": ["應該", "活該"], "必": ["必要", "必定", "必須", "務必"], "通": ["通過", "交通", "通知", "通透", "通常"], "場": ["操場", "球場", "場地", "市場"], "導": ["導師", "導遊", "領導", "引導"], "貴": ["珍貴", "貴重", "寶貴", "昂貴"], "絲": ["絲帶", "一絲", "絲瓜", "蠶絲"], "綁": ["綁住", "綁緊", "捆綁", "綁架"], "鬆": ["輕鬆", "鬆開", "放鬆", "鬆軟"], "翩": ["翩翩", "翩翩起舞"], "非": ["非常", "是非", "除非", "非凡"], "關": ["關門", "關心", "開關", "關係"], "澡": ["洗澡", "澡盆", "泡澡"], "怕": ["害怕", "可怕", "怕黑", "不怕"], "奮": ["興奮", "奮力", "奮鬥", "勤奮"], "應": ["應該", "答應", "反應", "應用"], "平": ["平安", "平常", "和平", "平凡"], "毛": ["毛毛蟲", "毛筆", "毛衣", "羽毛"], "肚": ["肚子", "肚皮", "大肚"], "蓋": ["蓋子", "蓋住", "鍋蓋", "蓋房子"], "柔": ["溫柔", "柔和", "輕柔", "柔軟"], "揉": ["揉一揉", "揉眼睛", "揉麵"], "副": ["一副", "副手", "副班長", "副作用"], "膠": ["膠帶", "膠水", "塑膠", "橡膠"], "喵": ["喵喵叫"], "茸": ["毛茸茸", "鹿茸"], "黏": ["黏住", "黏黏的", "黏貼", "黏土"]};
+const CHAR_WORDS={"字": ["名字", "生字", "寫字", "文字", "數字", "字形"], "舟": ["小舟", "輕舟"], "灑": ["灑水", "灑落", "灑下"], "載": ["記載", "下載", "滿載", "載運", "載重"], "航": ["航行", "航空", "航海", "航線", "導航", "通航"], "忌": ["忌妒", "顧忌"], "妒": ["妒忌"], "失": ["失去", "消失", "失望", "流失", "失落", "得失", "失手", "失常"], "讓": ["讓開", "讓步", "讓座", "讓路", "禮讓"], "窗": ["窗戶", "窗外", "門窗", "窗簾", "開窗"], "戶": ["窗戶", "門戶", "住戶", "戶外", "客戶"], "名": ["名字", "有名", "出名", "知名", "名片", "名叫", "排名", "名人", "名單"], "板": ["黑板", "木板", "地板", "平板", "石板", "滑板"], "答": ["回答", "答案", "答應", "答題", "問答"], "案": ["答案", "圖案", "方案", "專案", "案件"], "專": ["專心", "專家", "專門", "專題", "專用", "專長"], "穫": ["收穫"], "賽": ["比賽", "賽跑", "參賽", "球賽", "大賽", "賽場"], "已": ["已經", "早已", "而已"], "傘": ["雨傘", "陽傘", "打傘"], "似": ["相似", "好似", "看似", "近似", "似的", "似乎"], "追": ["追趕", "追問", "追上", "追加", "追求"], "喊": ["大喊", "呼喊", "喊叫", "叫喊", "喊聲"], "歪": ["歪頭", "歪歪的", "東倒西歪", "歪斜"], "霧": ["起霧", "大霧", "雲霧", "霧氣", "煙霧"], "晃": ["搖晃", "晃動", "一晃"], "亂": ["慌亂", "亂跑", "亂畫", "大亂", "混亂", "搗亂"], "由": ["自由", "由於", "理由", "經由", "由此"], "暴": ["暴雨", "暴風雨", "風暴", "暴力", "暴露"], "迷": ["迷路", "迷人", "球迷", "著迷", "迷信", "迷宮"], "岸": ["河岸", "海岸", "上岸", "岸邊", "兩岸", "對岸", "沿岸"], "撞": ["撞到", "撞車", "撞見", "碰撞"], "扶": ["扶著", "扶手", "扶起", "攙扶"], "店": ["書店", "飯店", "店裡", "開店", "商店", "店員"], "闆": ["老闆", "老闆娘"], "機": ["飛機", "機會", "手機", "機場", "司機", "相機", "危機", "時機", "機器"], "料": ["料理", "照料", "香料", "不料", "原料", "材料", "飲料", "資料"], "實": ["實在", "其實", "老實", "果實", "真實", "事實", "實話", "充實", "踏實", "誠實"], "繞": ["繞路", "圍繞", "繞過", "繞道", "繞圈"], "留": ["留下", "停留", "留學", "留意", "留心", "留給"], "觀": ["參觀", "觀看", "觀光", "樂觀", "外觀", "觀賞", "觀察", "觀眾"], "獅": ["獅子", "舞獅"], "擺": ["擺放", "擺動", "擺手", "搖擺", "擺在", "擺設"], "露": ["露水", "露出", "露天", "露珠", "露營"], "懷": ["懷念", "懷抱", "懷裡", "懷著", "心懷", "懷疑"], "準": ["準時", "對準", "水準", "準備", "標準"], "射": ["發射", "照射", "射門", "反射", "射手", "射箭"], "痛": ["痛苦", "頭痛", "痛快", "痛心", "好痛", "疼痛"], "刺": ["刺痛", "魚刺", "刺刺", "刺客", "刺激"], "使": ["使用", "天使", "使者", "大使", "使出", "使得"], "毒": ["有毒", "病毒", "消毒", "毒物", "毒蛇"], "欺": ["欺負", "欺騙"], "負": ["欺負", "負面", "自負", "負責", "勝負", "負擔"], "感": ["感謝", "感動", "感受", "感冒", "感情", "感到", "感人", "感應"], "遇": ["遇到", "遇見", "相遇", "遇上", "機遇"], "危": ["危險", "危機", "危急", "危害"], "葵": ["向日葵", "葵花"], "丑": ["小丑"], "觸": ["接觸", "觸動", "觸角", "觸摸"], "球": ["打球", "球場", "籃球", "地球", "月球", "球迷", "星球", "進球", "傳球", "眼球"], "練": ["練習", "教練", "練字", "演練", "訓練"], "習": ["練習", "學習", "溫習", "實習", "演習", "習慣", "複習"], "努": ["努力"], "總": ["總是", "總共", "總數", "總體", "總算"], "段": ["一段", "手段", "河段", "段落", "階段"], "利": ["利用", "有利", "不利", "利息", "順利", "便利"], "壓": ["壓力", "壓住", "壓扁", "氣壓", "高壓", "壓低"], "秒": ["每秒", "幾秒", "秒針", "分秒"], "整": ["整理", "完整", "整天", "整個", "平整", "整齊"], "該": ["應該", "不該", "活該"], "必": ["必要", "不必", "必定", "想必", "必須"], "通": ["通過", "交通", "通知", "通常", "通透", "通話", "通車", "開通", "通風", "通紅", "打通", "精通"], "場": ["操場", "機場", "球場", "場地", "現場", "一場", "會場", "場合", "市場"], "導": ["導師", "導遊", "指導", "教導", "導航", "導演", "領導"], "貴": ["珍貴", "寶貴", "名貴", "高貴", "貴重", "貴人"], "絲": ["絲帶", "一絲", "金絲", "絲瓜", "蠶絲"], "綁": ["綁住", "綁緊", "綁好", "捆綁"], "鬆": ["輕鬆", "放鬆", "鬆開", "鬆軟"], "翩": ["翩翩", "翩翩起舞"], "非": ["非常", "是非", "除非", "並非"], "關": ["關門", "關心", "關上", "開關", "關於", "有關", "關照", "相關", "關口"], "澡": ["洗澡", "泡澡"], "怕": ["害怕", "可怕", "不怕", "怕黑", "生怕", "哪怕"], "奮": ["興奮", "奮力", "奮起", "奮鬥"], "應": ["應該", "答應", "反應", "應用", "回應", "對應", "感應"], "平": ["平安", "平常", "平時", "平靜", "和平", "公平", "水平", "平等", "平日", "平地"], "毛": ["毛毛蟲", "毛筆", "毛病", "羊毛", "皮毛", "羽毛"], "肚": ["肚子", "肚皮", "魚肚"], "蓋": ["蓋子", "蓋住", "鍋蓋", "蓋上"], "柔": ["溫柔", "柔和", "柔軟"], "揉": ["揉一揉", "揉眼睛", "揉麵"], "副": ["一副", "副手", "副班長"], "膠": ["膠帶", "膠水", "塑膠"], "喵": ["喵喵叫"], "茸": ["毛茸茸", "鹿茸"], "黏": ["黏住", "黏黏的", "黏貼", "黏土"]};
 const CHAR_KNOWN=new Set(CHARBANK.map(e=>e[0]));
 const isKnownWord=w=>[...w].every(ch=>CHAR_KNOWN.has(ch)); // 整個詞都是一～三年級學過的字
 function charWords(c){return CHAR_WORDS[c]||[]}
+const CHAR_ZY={};CHARBANK.forEach(e=>CHAR_ZY[e[0]]=e[1]);
+// 「寫語詞」題：三上的字＋學過的字組成的兩字詞，兩個字都要寫
+function pairWords(c){return charWords(c).filter(w=>w.length===2&&isKnownWord(w))}
 const CHAR_SESSION=10;
 function charStat(c){return S.charProg[c]||{ok:0,bad:0,last:"",w:0}}
 function charSummary(){
@@ -1537,22 +1545,32 @@ function charSummary(){
   CHARBANK.forEach(([c])=>{const st=S.charProg[c],l=CHAR_LESSON[c];if(l)g3++;if(st&&(st.ok||st.bad)){done++;if(l)g3done++;if(st.bad>=st.ok){weak++;if(l)g3weak++}words+=st.w||0}});
   return {all,done,weak,words,g3,g3done,g3weak};
 }
-const CHAR_RANGE_DEF="mix3"; // mix3：三上為主（7+3）、only3：只練三上、all：一～三年級平均
+const CHAR_RANGE_DEF="mix3"; // mix3：三上為主、only3：只練三上、all：一～三年級平均
 function charRange(){return S.charRange||CHAR_RANGE_DEF}
 function pickCharSession(){
   const rng=charRange();
   const bucket=list=>{const weak=[],fresh=[],old=[];list.forEach(e=>{const st=S.charProg[e[0]];
     if(!st||(!st.ok&&!st.bad))fresh.push(e);else if(st.bad>=st.ok)weak.push(e);else old.push(e)});
     old.sort((a,b)=>(charStat(a[0]).last||"")<(charStat(b[0]).last||"")?-1:1);return {weak,fresh,old}};
-  const take=(b,n,lessonOrder)=>{const out=[];shuffle(b.weak).slice(0,Math.min(4,n)).forEach(e=>out.push(e));
-    const fr=lessonOrder?b.fresh.slice().sort((a,c)=>(CHAR_LESSON[a[0]]||9)-(CHAR_LESSON[c[0]]||9)||Math.random()-.5):shuffle(b.fresh);
-    fr.forEach(e=>{if(out.length<n)out.push(e)});b.old.forEach(e=>{if(out.length<n)out.push(e)});return out};
+  // 順序全部打亂：先錯的、再沒練過的、最後很久沒練的
+  const take=(b,n,skip)=>{const out=[];const ok=e=>!skip.has(e[0]);
+    shuffle(b.weak).filter(ok).slice(0,Math.min(4,n)).forEach(e=>out.push(e));
+    shuffle(b.fresh).filter(ok).forEach(e=>{if(out.length<n)out.push(e)});
+    b.old.filter(ok).forEach(e=>{if(out.length<n)out.push(e)});return out};
   const g3=CHARBANK.filter(e=>CHAR_LESSON[e[0]]),g12=CHARBANK.filter(e=>!CHAR_LESSON[e[0]]);
-  let out=[];
-  if(rng==="only3")out=take(bucket(g3),CHAR_SESSION,true);
-  else if(rng==="all")out=take(bucket(CHARBANK),CHAR_SESSION,false);
-  else{const a=take(bucket(g3),7,true);const b=take(bucket(g12),CHAR_SESSION-a.length,false);out=a.concat(b)}
-  return shuffle(out.slice(0,CHAR_SESSION));
+  const plan=rng==="only3"?{w:5,c3:5,c12:0}:rng==="all"?{w:3,c3:2,c12:5}:{w:4,c3:3,c12:3};
+  const used=new Set(),items=[];
+  // 1) 寫語詞：挑三上的字（有兩字詞的），詞按練過的次數輪流換
+  const g3p=g3.filter(e=>pairWords(e[0]).length);
+  take(bucket(g3p),plan.w,used).forEach(e=>{const c=e[0],ws=pairWords(c),st=charStat(c);const w=ws[(st.ok+st.bad)%ws.length];
+    used.add(c);[...w].forEach(ch=>used.add(ch));items.push({k:"w",c,w})});
+  // 2) 單字：三上
+  take(bucket(g3),plan.c3,used).forEach(e=>{used.add(e[0]);items.push({k:"c",e})});
+  // 3) 單字：一二年級複習
+  take(bucket(g12),plan.c12,used).forEach(e=>{used.add(e[0]);items.push({k:"c",e})});
+  // 不夠就用三上的字補滿
+  if(items.length<CHAR_SESSION)take(bucket(g3),CHAR_SESSION-items.length,used).forEach(e=>{used.add(e[0]);items.push({k:"c",e})});
+  return shuffle(items.slice(0,CHAR_SESSION));
 }
 let CS=null; // 本次練習：{list, idx, results:{c:{ok,w}}}
 function startChars(){
@@ -1572,7 +1590,8 @@ function charWordRecord(c,ok){
 }
 function renderChar(){
   if(CS.idx>=CS.list.length){renderCharDone();return}
-  const e=CS.list[CS.idx],[c,z,w0]=e;
+  const it=CS.list[CS.idx];if(it.k==="w"){renderWordItem(it);return}
+  const e=it.e,[c,z,w0]=e;
   // 三上的字：提示詞輪流換（第幾次練就用第幾個），讓同一個字在不同的詞裡出現
   const cw=charWords(c),st0=charStat(c),w=cw.length?cw[(st0.ok+st0.bad)%cw.length]:w0;
   const others=cw.filter(x=>x!==w);
@@ -1616,6 +1635,55 @@ function renderChar(){
         if(others.length&&!star){$("chWordAfter").innerHTML=`<div class="explain"><div class="m">「${esc(c)}」還可以組：${others.map(esc).join("、")}</div></div><div class="row"><button class="btn blue" id="wNext">下一個字</button></div>`;$("wNext").onclick=next}else setTimeout(next,star?900:0)};
       $("wRetry").onclick=()=>{clearPad("padCv2");$("wordDone").disabled=false;$("chWordAfter").innerHTML=""};
       $("wSkip").onclick=()=>{charWordRecord(c,false);next()};
+    };
+  }
+  function next(){CS.idx++;renderChar();window.scrollTo({top:0,behavior:"smooth"})}
+}
+function renderWordItem(it){
+  const {c,w}=it,chars=[...w],main=c;
+  const others=charWords(main).filter(x=>x!==w);
+  const head=`<div class="meta"><span>第 ${CS.idx+1} 題 / ${CS.list.length}</span><span><span class="tag b">寫語詞・三上第 ${CHAR_LESSON[main]} 課</span><button class="homebtn" id="homeBtn">回到首頁</button></span></div>`;
+  $("qCard").innerHTML=`${head}
+  <div class="ask">① 把這個語詞的兩個字都寫出來：</div>
+  <div class="chq"><div class="chw">${chars.map(ch=>`<span class="zslot">${esc(CHAR_ZY[ch]||"")}</span>`).join("")}</div></div>
+  <div class="pad two" id="pad"><canvas id="padCv" width="1040" height="520"></canvas><div class="ghost hidden" id="ghost">${chars.map(ch=>`<span>${esc(ch)}</span>`).join("")}</div></div>
+  <div class="row"><button class="btn ghost" id="padClear">清除</button><button class="btn" id="padReveal">看答案</button></div>
+  <div id="chAfter"></div>`;
+  bindHome();setupPad("padCv","padClear");
+  dog(IMG.ask,`兩個字都寫在格子裡，${chars.filter(ch=>!CHAR_LESSON[ch]).length?"有一個是以前學過的字喔。":"都是這學期的字。"}`);
+  $("padReveal").onclick=()=>{
+    $("ghost").classList.remove("hidden");$("padReveal").disabled=true;
+    $("chAfter").innerHTML=`<div class="explain"><div class="w">${esc(w)}</div><div class="m">${chars.map(ch=>`${esc(ch)}（${esc(CHAR_ZY[ch]||"")}${CHAR_LESSON[ch]?`・三上第 ${CHAR_LESSON[ch]} 課`:"・以前學過"}）`).join("　")}</div><div class="s">比一比：兩個字都和淡淡的字一樣嗎？</div></div>
+    <div class="two"><button class="btn blue" id="chOk">兩個都寫對了</button><button class="btn ghost" id="chNo">有寫錯，描一次</button></div>`;
+    $("chOk").onclick=()=>{chars.forEach(ch=>charRecord(ch,true));dog(pick(IMG.happy),`「${w}」兩個字你都會寫了。`);stepWord()};
+    $("chNo").onclick=()=>{
+      $("chAfter").innerHTML=`<div class="explain bad"><div class="w">${esc(w)}</div><div class="m">哪個字寫錯了？點一下，再沿著淡淡的字描一次。</div></div>
+      <div class="two">${chars.map((ch,i)=>`<button class="btn ghost" data-bad="${i}">${esc(ch)} 寫錯</button>`).join("")}</div><div class="row"><button class="btn" id="chTraced">描好了，去造詞</button></div>`;
+      const bad=new Set();$("chAfter").querySelectorAll("[data-bad]").forEach(b=>b.onclick=()=>{bad.add(+b.dataset.bad);b.classList.add("blue");b.classList.remove("ghost")});
+      clearPad("padCv");$("ghost").classList.remove("hidden");$("ghost").classList.add("trace");
+      $("chTraced").onclick=()=>{chars.forEach((ch,i)=>charRecord(ch,!bad.has(i)));if(!bad.size)chars.forEach(ch=>charRecord(ch,false));stepWord()};
+    };
+  };
+  function stepWord(){
+    $("chAfter").innerHTML=`<div class="ask" style="margin-top:14px">② 再用「${esc(main)}」造一個不一樣的語詞（不能是「${esc(w)}」）：</div>
+    <div class="pad wide" id="pad2"><canvas id="padCv2" width="1200" height="400"></canvas><div class="grid3"></div></div>
+    <div class="row"><button class="btn ghost" id="padClear2">清除</button>${others.length?`<button class="btn ghost" id="wordHint">💡 提示</button>`:""}<button class="btn" id="wordDone">寫好了</button></div>
+    <div class="small hidden" id="wordHintBox"></div>
+    <div id="chWordAfter"></div>`;
+    setupPad("padCv2","padClear2");
+    dog(IMG.ask,`想一想，還有哪個詞裡面有「${main}」？`);
+    const wh=$("wordHint");if(wh){let hn=0;const hs=others.slice().sort((a,b)=>(isKnownWord(b)?1:0)-(isKnownWord(a)?1:0));
+      wh.onclick=()=>{if(hn>=hs.length)return;hn++;$("wordHintBox").classList.remove("hidden");
+        $("wordHintBox").innerHTML=`提示：${hs.slice(0,hn).map(y=>`<b>${esc(y).replace(esc(main),`<span style="color:var(--pink)">${esc(main)}</span>`)}</b>${isKnownWord(y)?"（都是學過的字）":""}`).join("、")}`;
+        if(hn>=hs.length)wh.disabled=true}}
+    $("wordDone").onclick=()=>{
+      $("wordDone").disabled=true;
+      $("chWordAfter").innerHTML=`<div class="explain"><div class="m">請爸媽或自己看一下：這個詞裡有「${esc(main)}」嗎？是一個大家會用的詞嗎？</div></div>
+      <div class="two"><button class="btn blue" id="wOk">造對了</button><button class="btn ghost" id="wRetry">換一個再寫</button></div><div class="row"><button class="sbtn soft" id="wSkip">想不到，先跳過</button></div>`;
+      $("wOk").onclick=()=>{const star=charWordRecord(main,true);dog(pick(IMG.happy),star?`5 個字都寫對又造了詞，⭐ +1 學習星星！`:`你用「${main}」造出自己的詞了。（${CS.good%5}/5）`);
+        if(others.length&&!star){$("chWordAfter").innerHTML=`<div class="explain"><div class="m">「${esc(main)}」還可以組：${others.map(esc).join("、")}</div></div><div class="row"><button class="btn blue" id="wNext">下一題</button></div>`;$("wNext").onclick=next}else setTimeout(next,star?900:0)};
+      $("wRetry").onclick=()=>{clearPad("padCv2");$("wordDone").disabled=false;$("chWordAfter").innerHTML=""};
+      $("wSkip").onclick=()=>{charWordRecord(main,false);next()};
     };
   }
   function next(){CS.idx++;renderChar();window.scrollTo({top:0,behavior:"smooth"})}
