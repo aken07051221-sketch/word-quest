@@ -834,7 +834,7 @@ function nextTypeFor(item,exclude,modeCount){ // 優先沒答對過、且不是�
   return pick(cand.filter(k=>(modeCount[k]||0)===min));
 }
 function reviewTaskFor(w,exclude){
-  const item=allWords().find(x=>x.w===w);if(!item)return null;
+  const item=allWords().find(x=>x.w===w);if(!item||S.disabled.includes(item.id))return null;
   const st=S.wordState[w]||{};
   // 優先換題型：有辨析題就用辨析題（換情境），否則用和上次不同的題型
   const dq=DISCRIM.filter(q=>q.ans===w&&!S.disabledQ.includes(q.id)&&st.lastType!=="discrim");
@@ -879,7 +879,7 @@ function buildPlan(slots,have){ // slots：要排幾題；have：已排／已答
   const room=()=>plan.length<slots;
   // 1) 到期複習（每天最多 3 題、含在題數內）
   if(m==="mix"||m==="meaning"||m==="blank"||m==="scene"){
-    const due=dueReviews().filter(w=>!used.has(w));
+    const off=offWords();const due=dueReviews().filter(w=>!used.has(w)&&!off.has(w));
     let n=0;
     for(const w of due){
       if(!room()||cnt.review>=MAX_REVIEW_PER_DAY)break;
@@ -893,7 +893,7 @@ function buildPlan(slots,have){ // slots：要排幾題；have：已排／已答
   if(!room())return {plan,cnt,notes};
   // 2) 單一題型模式
   if(m==="precise"){
-    const qs=qFilter(shuffle(PRECISE.filter(q=>canQ(q.id)))).sort(qRank);
+    const qs=qFilter(shuffle(PRECISE.filter(q=>canQ(q.id)&&!offWords().has(q.ans)))).sort(qRank);
     qs.forEach(q=>{if(room())push({type:"precise",qid:q.id})});
     if(!plan.length)notes.push("表達題都被停用了");
     return {plan,cnt,notes};
@@ -914,12 +914,12 @@ function buildPlan(slots,have){ // slots：要排幾題；have：已排／已答
   }
   // 3) 混合：表達題（語詞）
   if(targetPrecise){
-    const qs=qFilter(shuffle(PRECISE.filter(q=>canQ(q.id)))).sort(qRank);
+    const qs=qFilter(shuffle(PRECISE.filter(q=>canQ(q.id)&&!offWords().has(q.ans)))).sort(qRank);
     for(const q of qs){if(!room()||cnt.precise>=targetPrecise)break;push({type:"precise",qid:q.id})}
     if(cnt.precise<targetPrecise)notes.push(`表達題只排了 ${cnt.precise} 題（題庫不足）`);
   }
   // 4) 混合：辨析題，補到約一半；成語／語詞依比例挑
-  const dpool=DISCRIM.filter(q=>canQ(q.id)&&!used.has(q.ans)&&!S.mastered.includes(q.ans)&&(g==="all"||q.grp===g));
+  const offW=offWords();const dpool=DISCRIM.filter(q=>canQ(q.id)&&!used.has(q.ans)&&!S.mastered.includes(q.ans)&&!offW.has(q.ans)&&(g==="all"||q.grp===g));
   const dSorted=qFilter(shuffle(dpool)).sort(qRank);
   while(room()&&cnt.discrim<targetDiscrim){
     const needIdiom=cnt.idiom<targetIdiom;
@@ -1083,6 +1083,8 @@ function bank(){
   const dis=new Set(S.disabled),ms=new Set(S.mastered);
   return bankFor(S.grp).filter(x=>!dis.has(x.id)&&!ms.has(x.w));
 }
+// 詞語庫裡被「停用」或「永久移除」的詞：辨析題、表達題、複習也一律不出
+function offWords(){const dis=new Set(S.disabled),rm=new Set(S.removed);const o=new Set();BUILTIN.forEach(x=>{if(dis.has(x.id)||rm.has(x.id))o.add(x.w)});return o}
 function remaining(grp){const dis=new Set(S.disabled),ms=new Set(S.mastered);return bankFor(grp).filter(x=>!dis.has(x.id)&&!ms.has(x.w)).length}
 /* 理解完成：答對累計達到次數就收進理解完成詞庫，之後不再出題 */
 /* 理解進度是「不同題型各答對一次」：選意思／填空／情境／連連看，集滿 masterNeed 種才算理解完成；答錯可以再出同一種 */
@@ -1854,7 +1856,7 @@ function renderAdmin(){
     return `<div class="grp"><button data-g="${g}" class="gt"><span>${g}（啟用 ${on} / ${list.length}）</span><span>${openGroups[g]?"▲":"▼"}</span></button>
     <div class="${openGroups[g]?"":"hidden"}">${list.map(x=>`<div class="li"><span class="w ${dis.has(x.id)?"off":""}">${esc(x.w)}</span><span class="d">${esc(x.m)}</span><button data-id="${x.id}" class="tg ${dis.has(x.id)?"en":""}">${dis.has(x.id)?"啟用":"停用"}</button></div>`).join("")}</div></div>`}).join("");
   $("builtinGroups").querySelectorAll(".gt").forEach(b=>b.onclick=()=>{openGroups[b.dataset.g]=!openGroups[b.dataset.g];renderAdmin()});
-  $("builtinGroups").querySelectorAll(".tg").forEach(b=>b.onclick=()=>{const id=b.dataset.id;const k=S.disabled.indexOf(id);if(k<0)S.disabled.push(id);else S.disabled.splice(k,1);save();renderAdmin();renderStart()});
+  $("builtinGroups").querySelectorAll(".tg").forEach(b=>b.onclick=()=>{const id=b.dataset.id;const k=S.disabled.indexOf(id);if(k<0)S.disabled.push(id);else S.disabled.splice(k,1);save();rebuildRemaining();renderAdmin();renderStart()});
 }
 const openGroups={};
 function renderEV(){
@@ -1948,7 +1950,7 @@ function renderQBank(){
   box.innerHTML=`<div class="grp"><button class="gt" data-g="__d"><span>辨析題（${DISCRIM.length-DISCRIM.filter(q=>S.disabledQ.includes(q.id)).length}／${DISCRIM.length} 啟用）</span><span>${openGroups.__d?"▲":"▼"}</span></button><div class="${openGroups.__d?"":"hidden"}">${DISCRIM.map(q=>row(q,q.grp)).join("")}</div></div>
   <div class="grp"><button class="gt" data-g="__p"><span>表達更精確（${PRECISE.length-PRECISE.filter(q=>S.disabledQ.includes(q.id)).length}／${PRECISE.length} 啟用）</span><span>${openGroups.__p?"▲":"▼"}</span></button><div class="${openGroups.__p?"":"hidden"}">${PRECISE.map(q=>row(q,q.cat==="v"?"動詞":"感受／形容")).join("")}</div></div>`;
   box.querySelectorAll(".gt").forEach(b=>b.onclick=()=>{openGroups[b.dataset.g]=!openGroups[b.dataset.g];renderQBank()});
-  box.querySelectorAll(".tg").forEach(b=>b.onclick=()=>{const id=b.dataset.id;const k=S.disabledQ.indexOf(id);if(k<0)S.disabledQ.push(id);else S.disabledQ.splice(k,1);save();renderQBank()});
+  box.querySelectorAll(".tg").forEach(b=>b.onclick=()=>{const id=b.dataset.id;const k=S.disabledQ.indexOf(id);if(k<0)S.disabledQ.push(id);else S.disabledQ.splice(k,1);save();rebuildRemaining();renderQBank()});
 }
 $("starOn").onchange=e=>{S.starReward.on=e.target.checked;save();renderStarAdmin();renderStart()};
 
