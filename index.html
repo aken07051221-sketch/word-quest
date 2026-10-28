@@ -846,7 +846,8 @@ function reviewTaskFor(w,exclude){
   const item=allWords().find(x=>x.w===w);if(!item||S.disabled.includes(item.id))return null;
   const st=S.wordState[w]||{};
   // 優先換題型：有辨析題就用辨析題（換情境），否則用和上次不同的題型
-  const dq=DISCRIM.filter(q=>q.ans===w&&!S.disabledQ.includes(q.id)&&st.lastType!=="discrim");
+  const seenRecently=id=>{const h=S.qHist[id];return !!(h&&h.d&&daysBetween(h.d,twToday())<14)};
+  const dq=DISCRIM.filter(q=>q.ans===w&&!S.disabledQ.includes(q.id)&&st.lastType!=="discrim"&&!seenRecently(q.id));
   if(dq.length&&!exclude)return {type:"discrim",qid:pick(dq).id,review:1,w};
   const mode=nextTypeFor(item,st.lastType||"");
   return {type:"q",mode,wid:item.id,w,review:1};
@@ -873,10 +874,13 @@ function buildPlan(slots,have){ // slots：要排幾題；have：已排／已答
   const hist=id=>S.qHist[id]||{d:"",ok:0,bad:0};
   const lastAsked=id=>hist(id).d;
   const pendingQ=id=>{const h=hist(id);return !!(h.due&&h.due>today)};
-  const qPrio=id=>{const h=hist(id);if(h.due&&h.due<=today)return 0;if(!h.d)return 1;if(h.ok>=2&&daysBetween(h.d,today)<30)return 4;return daysBetween(h.d,today)>=7?2:3};
+  /* 2026/10/28：答對一次休息 14 天、答對兩次以上休息 30 天；休息中的題目不硬塞（寧可改出一般題），避免同一題一週內一直出現 */
+  const restDays=h=>h.ok>=2?30:14;
+  const qPrio=id=>{const h=hist(id);if(h.due&&h.due<=today)return 0;if(!h.d)return 1;if(h.due&&h.due>today)return 5;return daysBetween(h.d,today)>=restDays(h)?2:4};
+  const qFresh=q=>qPrio(q.id)<=2; // 可以出：到期、沒出過、休息夠了
   const retired=id=>qPrio(id)>=3;
   const qRank=(a,b)=>qPrio(a.id)-qPrio(b.id)||(hist(a.id).d<hist(b.id).d?-1:hist(a.id).d>hist(b.id).d?1:0);
-  const qFilter=list=>{const ok=list.filter(q=>!pendingQ(q.id));return ok.length?ok:list};
+  const qFilter=list=>list.filter(q=>qFresh(q)); // 休息中／答錯未到期的一律不出
   /* 詞庫的詞：答錯 4～7 天後優先再出；答對的等 7 天、而且輪過其他詞再出 */
   const wh=w=>S.wHist[w]||{};
   const pendingW=w=>{const h=wh(w);return !!(h.due&&h.due>today)};
@@ -884,7 +888,9 @@ function buildPlan(slots,have){ // slots：要排幾題；have：已排／已答
   const wRank=(a,b)=>wPrio(a.w)-wPrio(b.w)||((wh(a.w).d||"")<(wh(b.w).d||"")?-1:(wh(a.w).d||"")>(wh(b.w).d||"")?1:0)||passedCount(a.w)-passedCount(b.w);
   const canQ=id=>!S.disabledQ.includes(id);
   const modeCount={};
-  const push=t=>{plan.push(t);if(t.type==="q")modeCount[t.mode]=(modeCount[t.mode]||0)+1;const c=catOfTask(t);cnt[c]++;if(t.type==="discrim"||t.type==="precise")cnt.discrim++;if(t.review)cnt.review++;if(t.type==="precise")cnt.precise++;if(t.type==="connect")cnt.connect++;(t.ws||[t.w]).forEach(w=>{if(w)used.add(w)})};
+  const why=t=>{if(t.review)return "到期複習";if(t.qid){const h=hist(t.qid);if(h.due&&h.due<=today)return "答錯後回鍋";if(!h.d)return "沒出過";return `上次 ${h.d.slice(5)}，答對 ${h.ok} 次，休息夠了`}
+    const ws=t.ws||[t.w];const hs=ws.map(w=>S.wHist[w]||{});if(hs.some(h=>h.due&&h.due<=today))return "答錯後回鍋";if(hs.every(h=>!h.d))return "沒出過";return `上次 ${hs.map(h=>h.d?h.d.slice(5):"—").join("/")}`};
+  const push=t=>{t.why=why(t);plan.push(t);if(t.type==="q")modeCount[t.mode]=(modeCount[t.mode]||0)+1;const c=catOfTask(t);cnt[c]++;if(t.type==="discrim"||t.type==="precise")cnt.discrim++;if(t.review)cnt.review++;if(t.type==="precise")cnt.precise++;if(t.type==="connect")cnt.connect++;(t.ws||[t.w]).forEach(w=>{if(w)used.add(w)})};
   const room=()=>plan.length<slots;
   // 1) 到期複習（每天最多 3 題、含在題數內）
   if(m==="mix"||m==="meaning"||m==="blank"||m==="scene"){
@@ -904,7 +910,7 @@ function buildPlan(slots,have){ // slots：要排幾題；have：已排／已答
   if(m==="precise"){
     const qs=qFilter(shuffle(PRECISE.filter(q=>canQ(q.id)&&!offWords().has(q.ans)))).sort(qRank);
     qs.forEach(q=>{if(room())push({type:"precise",qid:q.id})});
-    if(!plan.length)notes.push("表達題都被停用了");
+    if(!plan.length)notes.push("表達題目前都在休息中或被停用（答對過的題目會休息 14～30 天）");
     return {plan,cnt,notes};
   }
   if(m==="connect"){
@@ -1953,6 +1959,7 @@ function renderPlanStats(){
   const typeCount={};d.plan.forEach(t=>{const k=t.type==="q"?MODE_NAME[t.mode]:MODE_NAME[t.type];typeCount[k]=(typeCount[k]||0)+1});
   $("planStats").innerHTML=`<div class="small">今日題組 ${d.plan.length} 題（已答 ${Math.min(d.idx,d.plan.length)}）：成語 <b>${c.idiom||0}</b>、語詞 <b>${c.word||0}</b>；辨析類 <b>${c.discrim||0}</b>（含表達題 ${c.precise||0}）；複習 <b>${c.review||0}</b>；連連看 ${c.connect||0}。<br>題型：${Object.entries(typeCount).map(([k,v])=>`${k} ${v}`).join("、")}<br>範圍：${esc(d.grp==="all"?"全部":d.grp)}／${esc(d.mode)}${d.stats.rebuilt?`（今天重建過 ${d.stats.rebuilt} 次）`:""}</div>
   ${(d.stats.notes||[]).length?`<div class="warn" style="margin-top:8px">${d.stats.notes.map(esc).join("<br>")}</div>`:""}
+  <details style="margin-top:8px"><summary class="small" style="cursor:pointer;font-weight:900">今天每一題是怎麼來的</summary><div class="small">${d.plan.map((t,i)=>{const name=t.type==="q"?MODE_NAME[t.mode]:MODE_NAME[t.type];const w=t.ws?t.ws.join("、"):(t.w||(t.qid&&(DISCRIM.concat(PRECISE).find(q=>q.id===t.qid)||{}).ans)||"");return `${i<d.idx?"✓":"○"} ${i+1}. ${esc(name)}「${esc(w)}」— ${esc(t.why||"")}`}).join("<br>")}</div></details>
   <div class="small" style="margin-top:6px">複習：練習完成後約 1 天第一次複習，通過後約 3 天、再 7 天，三次通過標記「複習通過」（之後約 30 天出現一次）；答錯改成約 1 天後再複習。每天最多 3 題複習，含在題數內。到期未排的複習：${Math.max(0,dueReviews().length-(c.review||0))} 個。</div>`;
 }
 function renderStarAdmin(){
