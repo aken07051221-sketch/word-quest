@@ -345,6 +345,8 @@ input,textarea{-webkit-user-select:text;user-select:text}
 #playScreen{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .pad,.pad *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:none}
 button{touch-action:manipulation}
+#playScreen *{-webkit-touch-callout:none}
+#playScreen button,.pad .grid3{-webkit-user-select:none;user-select:none;touch-action:none}
 </style>
 </head>
 <body>
@@ -1899,6 +1901,14 @@ $("wheelClose").onclick=closeWheel;$("spinBtn").onclick=spin;$("wheelCap").oncli
 $("histToggle").onclick=()=>{histOpen=!histOpen;renderHistory()};
 // 練習畫面整區：長按不要出現拷貝／查詢選單（觸控筆很容易誤觸）
 ["contextmenu","selectstart"].forEach(t=>$("playScreen").addEventListener(t,e=>{if(!/^(INPUT|TEXTAREA)$/.test(e.target.tagName))e.preventDefault()}));
+// 練習畫面裡的按鈕改成「觸控即點」：touchstart 就擋掉 iPad 的長按／選取，放開時自己觸發 click
+(()=>{const ps=$("playScreen");let tb=null;
+  ps.addEventListener("touchstart",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;const t=e.touches[0];tb={b,x:t.clientX,y:t.clientY,at:Date.now()};e.preventDefault()},{passive:false});
+  ps.addEventListener("touchmove",e=>{if(tb)e.preventDefault()},{passive:false});
+  ps.addEventListener("touchend",e=>{if(!tb)return;const t=e.changedTouches[0],d=Math.hypot(t.clientX-tb.x,t.clientY-tb.y);const b=tb.b;tb=null;
+    if(d<24&&e.target.closest("button")===b){e.preventDefault();b.click()}},{passive:false});
+  ps.addEventListener("touchcancel",()=>{tb=null});
+})();
 document.querySelectorAll("#histTabs .tab").forEach(b=>b.onclick=()=>{histTab=b.dataset.t;renderHistory()});
 function openAdminTab(t){$("adminDrawer").classList.remove("hidden");$("tabWords").classList.toggle("hidden",t!=="words");$("tabSettings").classList.toggle("hidden",t!=="settings");document.querySelectorAll("#adminDrawer .tab").forEach(b=>b.classList.toggle("on",b.dataset.t===t));$("adminTitle").textContent=t==="words"?"詞語庫":"設定";renderAdmin();$("adminDrawer").querySelector(".panel").scrollTop=0}
 $("openAdmin").onclick=()=>openAdminTab("words");$("openSettings").onclick=()=>openAdminTab("settings");
