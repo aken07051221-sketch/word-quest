@@ -338,6 +338,13 @@ mark{background:#FFF3C4;color:inherit;padding:0 3px;border-radius:4px;text-decor
 .pad.two .ghost{font-size:150px}
 .pad.two .ghost span{flex:1;text-align:center}
 .chw .zslot+.zslot{margin-left:8px}
+
+/* iPad／觸控筆：整個遊戲區不可選取文字、不跳出拷貝／查詢選單；只有輸入框可以選 */
+body,button,.card,.qcard,.pad,.padbar,.row,.two,.chq,.chw,.explain,.ask,.meta{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea{-webkit-user-select:text;user-select:text}
+#playScreen{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.pad,.pad *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:none}
+button{touch-action:manipulation}
 </style>
 </head>
 <body>
@@ -1718,6 +1725,11 @@ function setupPad(id,clearId){
   cv.onpointerdown=e=>{e.preventDefault();PADS[id].drawing=true;try{cv.setPointerCapture(e.pointerId)}catch(err){}begin();const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+0.1,p.y+0.1);ctx.stroke()};
   cv.onpointermove=e=>{if(!PADS[id].drawing)return;e.preventDefault();const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke()};
   cv.onpointerup=cv.onpointercancel=()=>{PADS[id].drawing=false};
+  // iPad／Apple Pencil：擋掉長按選取、拷貝選單和捲動，筆才不會「點」出奇怪的東西
+  const stop=e=>e.preventDefault();
+  ["touchstart","touchmove","touchend"].forEach(t=>cv.addEventListener(t,stop,{passive:false}));
+  cv.parentNode.addEventListener("contextmenu",stop);cv.parentNode.addEventListener("selectstart",stop);
+  cv.parentNode.parentNode.addEventListener("contextmenu",stop);
   $(clearId).onclick=()=>clearPad(id);
 }
 function drawGrid(cv){
@@ -1885,6 +1897,8 @@ $("resetBtn").onclick=()=>{if(!confirm("要重新安排今天的題組嗎？今�
 $("spinBanner").onclick=openWheel;$("doneWheel").onclick=openWheel;
 $("wheelClose").onclick=closeWheel;$("spinBtn").onclick=spin;$("wheelCap").onclick=spin;
 $("histToggle").onclick=()=>{histOpen=!histOpen;renderHistory()};
+// 練習畫面整區：長按不要出現拷貝／查詢選單（觸控筆很容易誤觸）
+["contextmenu","selectstart"].forEach(t=>$("playScreen").addEventListener(t,e=>{if(!/^(INPUT|TEXTAREA)$/.test(e.target.tagName))e.preventDefault()}));
 document.querySelectorAll("#histTabs .tab").forEach(b=>b.onclick=()=>{histTab=b.dataset.t;renderHistory()});
 function openAdminTab(t){$("adminDrawer").classList.remove("hidden");$("tabWords").classList.toggle("hidden",t!=="words");$("tabSettings").classList.toggle("hidden",t!=="settings");document.querySelectorAll("#adminDrawer .tab").forEach(b=>b.classList.toggle("on",b.dataset.t===t));$("adminTitle").textContent=t==="words"?"詞語庫":"設定";renderAdmin();$("adminDrawer").querySelector(".panel").scrollTop=0}
 $("openAdmin").onclick=()=>openAdminTab("words");$("openSettings").onclick=()=>openAdminTab("settings");
